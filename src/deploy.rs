@@ -277,7 +277,7 @@ pub enum ConfirmProfileError {
 }
 
 pub async fn confirm_profile(
-    deploy_data: &super::DeployData<'_>,
+    deploy_data: &super::DeployData,
     deploy_defs: &super::DeployDefs,
     temp_path: &Path,
     ssh_addr: &str,
@@ -307,7 +307,7 @@ pub async fn confirm_profile(
         .arg(confirm_command)
         .spawn()
         .map_err(ConfirmProfileError::SSHConfirm)?;
-    
+
     if deploy_data.merged_settings.interactive_sudo.unwrap_or(false) {
         trace!("[confirm] Piping in sudo password");
         handle_sudo_stdin(&mut ssh_confirm_child, deploy_defs)
@@ -318,7 +318,7 @@ pub async fn confirm_profile(
     let ssh_confirm_exit_status = ssh_confirm_child
         .wait()
         .await
-        .map_err(ConfirmProfileError::SSHConfirm)?; 
+        .map_err(ConfirmProfileError::SSHConfirm)?;
 
     match ssh_confirm_exit_status.code() {
         Some(0) => (),
@@ -357,7 +357,7 @@ pub enum DeployProfileError {
 }
 
 pub async fn deploy_profile(
-    deploy_data: &super::DeployData<'_>,
+    deploy_data: &super::DeployData,
     deploy_defs: &super::DeployDefs,
     dry_activate: bool,
     boot: bool,
@@ -388,11 +388,11 @@ pub async fn deploy_profile(
         profile_info: &deploy_data.get_profile_info()?,
         closure: &deploy_data.profile.profile_settings.path,
         auto_rollback,
-        temp_path: temp_path,
+        temp_path,
         confirm_timeout,
         magic_rollback,
         debug_logs: deploy_data.debug_logs,
-        log_dir: deploy_data.log_dir,
+        log_dir: deploy_data.log_dir.as_deref(),
         dry_activate,
         boot,
         test,
@@ -450,10 +450,10 @@ pub async fn deploy_profile(
         let self_wait_command = build_wait_command(&WaitCommandData {
             sudo: &deploy_defs.sudo,
             closure: &deploy_data.profile.profile_settings.path,
-            temp_path: temp_path,
-            activation_timeout: activation_timeout,
+            temp_path,
+            activation_timeout,
             debug_logs: deploy_data.debug_logs,
-            log_dir: deploy_data.log_dir,
+            log_dir: deploy_data.log_dir.as_deref(),
         });
 
         debug!("Constructed wait command: {}", self_wait_command);
@@ -476,7 +476,7 @@ pub async fn deploy_profile(
         ssh_wait_command
             .arg(&ssh_addr)
             .stdin(std::process::Stdio::piped());
-        
+
         for ssh_opt in &deploy_data.merged_settings.ssh_opts {
             ssh_wait_command.arg(ssh_opt);
         }
@@ -556,7 +556,7 @@ pub enum RevokeProfileError {
     InvalidDeployDataDefs(#[from] DeployDataDefsError),
 }
 pub async fn revoke(
-    deploy_data: &crate::DeployData<'_>,
+    deploy_data: &crate::DeployData,
     deploy_defs: &crate::DeployDefs,
 ) -> Result<(), RevokeProfileError> {
     let self_revoke_command = build_revoke_command(&RevokeCommandData {
@@ -564,7 +564,7 @@ pub async fn revoke(
         closure: &deploy_data.profile.profile_settings.path,
         profile_info: deploy_data.get_profile_info()?,
         debug_logs: deploy_data.debug_logs,
-        log_dir: deploy_data.log_dir,
+        log_dir: deploy_data.log_dir.as_deref(),
     });
 
     debug!("Constructed revoke command: {}", self_revoke_command);
