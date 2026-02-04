@@ -26,7 +26,7 @@ use log::{debug, error, info, warn};
 
 /// Remote activation utility for deploy-rs
 #[derive(Parser, Debug)]
-#[command(version = "1.0", author = "Serokell <https://serokell.io/>")]
+#[command(version, author = "Serokell <https://serokell.io/>")]
 struct Opts {
     /// Print debug logs to output
     #[arg(short, long)]
