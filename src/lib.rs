@@ -424,13 +424,16 @@ enum ProfileInfo {
 pub enum DeployDataDefsError {
     #[error("Neither `user` nor `sshUser` are set for profile {0} of node {1}")]
     NoProfileUser(String, String),
+
+    #[error("Error obtaining local username: {0}")]
+    Whoami(whoami::Error)
 }
 
 impl DeployData {
     pub fn defs(&self) -> Result<DeployDefs, DeployDataDefsError> {
         let ssh_user = match self.merged_settings.ssh_user {
             Some(ref u) => u.clone(),
-            None => whoami::username(),
+            None => whoami::username().map_err(DeployDataDefsError::Whoami)?,
         };
 
         let profile_user = self.get_profile_user()?;
