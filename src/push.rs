@@ -92,12 +92,9 @@ pub async fn build_profile_locally(
         build_command.arg(derivation_name)
     };
 
-    match std::env::var("TMPDIR") {
-        Ok(build_dir) => {
-            info!("Detected TMPDIR is set for build to {build_dir}");
-            build_command.env("TMPDIR", build_dir);
-        }
-        Err(_) => {}
+    if let Ok(build_dir) = std::env::var("TMPDIR") {
+        info!("Detected TMPDIR is set for build to {build_dir}");
+        build_command.env("TMPDIR", build_dir);
     }
     match (data.keep_result, data.supports_flakes) {
         (true, _) => {
@@ -402,9 +399,9 @@ pub async fn build_profile(data: &PushProfileData) -> Result<(), PushProfileErro
             warn!("remote builds using non-flake nix are experimental");
         }
 
-        build_profile_remotely(&data, &deriver).await?;
+        build_profile_remotely(data, &deriver).await?;
     } else {
-        build_profile_locally(&data, &deriver).await?;
+        build_profile_locally(data, &deriver).await?;
     }
 
     Ok(())
@@ -454,7 +451,7 @@ pub async fn push_profile(data: PushProfileData) -> Result<(), PushProfileError>
             .deploy_data
             .merged_settings
             .compress
-            .unwrap_or_else(|| false);
+            .unwrap_or(false);
 
         let copy_exit_status = copy_command
             .arg("--to")

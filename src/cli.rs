@@ -309,7 +309,7 @@ fn print_deployment(
     for (_, data, defs) in parts {
         part_map
             .entry(data.node_name.to_string())
-            .or_insert_with(HashMap::new)
+            .or_default()
             .insert(
                 data.profile_name.to_string(),
                 PromptPart {
@@ -693,7 +693,7 @@ async fn run_deploy(
                                 e,
                             )
                         });
-                        if !res.is_ok() {
+                        if res.is_err() {
                             break;
                         }
                     }
@@ -705,7 +705,7 @@ async fn run_deploy(
                         }
                         Err(ref e) => {
                             pb.set_style(finish_style_error());
-                            pb.finish_with_message(format!("Error: {}", e.to_string()))
+                            pb.finish_with_message(format!("Error: {}", e))
                         }
                     }
 
@@ -753,7 +753,7 @@ async fn run_deploy(
                                 }
                                 Err(ref e) => {
                                     pb.set_style(finish_style_error());
-                                    pb.finish_with_message(format!("Error: {}", e.to_string()))
+                                    pb.finish_with_message(format!("Error: {}", e))
                                 }
                             }
                             res
@@ -761,7 +761,7 @@ async fn run_deploy(
                     }
                     Err(ref e) => {
                         pb.set_style(finish_style_error());
-                        pb.finish_with_message(format!("Error: {}", e.to_string()));
+                        pb.finish_with_message(format!("Error: {}", e));
                         // "spawn" a future that just returns the error when building locally fails
                         // this will ensure that the deployment is actually aborted in the error
                         // handling code below
@@ -801,7 +801,7 @@ async fn run_deploy(
                 //  the command line)
                 for (deploy_data, deploy_defs) in &succeeded {
                     if deploy_data.merged_settings.auto_rollback.unwrap_or(true) {
-                        deploy::deploy::revoke(*deploy_data, *deploy_defs)
+                        deploy::deploy::revoke(deploy_data, deploy_defs)
                             .await
                             .map_err(|e| {
                                 RunDeployError::RevokeProfile(

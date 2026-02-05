@@ -269,8 +269,7 @@ async fn handle_sudo_stdin(
                 .await;
             Ok(())
         }
-        None => Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
+        None => Err(std::io::Error::other(
             "Failed to open stdin for sudo command",
         )),
     }
@@ -427,7 +426,7 @@ pub async fn deploy_profile(
         .stdin(std::process::Stdio::piped());
 
     for ssh_opt in &deploy_data.merged_settings.ssh_opts {
-        ssh_activate_command.arg(&ssh_opt);
+        ssh_activate_command.arg(ssh_opt);
     }
 
     if !magic_rollback || dry_activate || boot {
@@ -559,7 +558,7 @@ pub async fn deploy_profile(
         let c = confirm_profile(deploy_data, deploy_defs, temp_path, &ssh_addr).await;
         recv_activated
             .await
-            .map_err(|x| DeployProfileError::SSHActivateTimeout(x))?;
+            .map_err(DeployProfileError::SSHActivateTimeout)?;
         c?;
 
         thread
@@ -610,7 +609,7 @@ pub async fn revoke(
         .stdin(std::process::Stdio::piped());
 
     for ssh_opt in &deploy_data.merged_settings.ssh_opts {
-        ssh_activate_command.arg(&ssh_opt);
+        ssh_activate_command.arg(ssh_opt);
     }
 
     let mut ssh_revoke_child = ssh_activate_command

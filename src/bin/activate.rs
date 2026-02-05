@@ -152,7 +152,7 @@ pub async fn deactivate(profile_path: &str) -> Result<(), DeactivateError> {
 
     let nix_env_rollback_exit_status = Command::new("nix-env")
         .arg("-p")
-        .arg(&profile_path)
+        .arg(profile_path)
         .arg("--rollback")
         .status()
         .await
@@ -167,7 +167,7 @@ pub async fn deactivate(profile_path: &str) -> Result<(), DeactivateError> {
 
     let nix_env_list_generations_out = Command::new("nix-env")
         .arg("-p")
-        .arg(&profile_path)
+        .arg(profile_path)
         .arg("--list-generations")
         .output()
         .await
@@ -196,7 +196,7 @@ pub async fn deactivate(profile_path: &str) -> Result<(), DeactivateError> {
 
     let nix_env_delete_generation_exit_status = Command::new("nix-env")
         .arg("-p")
-        .arg(&profile_path)
+        .arg(profile_path)
         .arg("--delete-generations")
         .arg(last_generation_id)
         .status()
@@ -211,8 +211,8 @@ pub async fn deactivate(profile_path: &str) -> Result<(), DeactivateError> {
     info!("Attempting to re-activate the last generation");
 
     let re_activate_exit_status = Command::new(format!("{}/deploy-rs-activate", profile_path))
-        .env("PROFILE", &profile_path)
-        .current_dir(&profile_path)
+        .env("PROFILE", profile_path)
+        .current_dir(profile_path)
         .status()
         .await
         .map_err(DeactivateError::Reactivate)?;
@@ -309,7 +309,7 @@ pub async fn activation_confirmation(
 
     danger_zone(done, confirm_timeout)
         .await
-        .map_err(|err| ActivationConfirmationError::WaitingError(err))
+        .map_err(ActivationConfirmationError::WaitingError)
 }
 
 #[derive(Error, Debug)]
@@ -522,7 +522,7 @@ fn get_profile_path(
                         let state_dir = env::var("XDG_STATE_HOME").or_else(|_| {
                             dirs::home_dir()
                                 .map(|h| {
-                                    format!("{}/.local/state", h.as_path().display().to_string())
+                                    format!("{}/.local/state", h.as_path().display())
                                 })
                                 .ok_or(GetProfilePathError::NoUserHome(profile_user))
                         })?;
@@ -538,7 +538,7 @@ fn get_profile_path(
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Ensure that this process stays alive after the SSH connection dies
-    let mut signals = Signals::new(&[SIGHUP])?;
+    let mut signals = Signals::new([SIGHUP])?;
     std::thread::spawn(move || {
         for _ in signals.forever() {
             println!("Received SIGHUP - ignoring...");

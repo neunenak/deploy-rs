@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 
 pub fn make_lock_path(temp_path: &Path, closure: &str) -> PathBuf {
     let lock_hash =
-        &closure["/nix/store/".len()..closure.find('-').unwrap_or_else(|| closure.len())];
+        &closure["/nix/store/".len()..closure.find('-').unwrap_or(closure.len())];
     temp_path.join(format!("deploy-rs-canary-{}", lock_hash))
 }
 
@@ -383,7 +383,7 @@ pub fn parse_file<'a>(
     let (node, profile) = parse_fragment(attribute)?;
 
     Ok(DeployFlake {
-        repo: &file,
+        repo: file,
         node,
         profile,
     })
