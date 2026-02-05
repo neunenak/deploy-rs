@@ -4,6 +4,7 @@
 //
 // SPDX-License-Identifier: MPL-2.0
 
+use deploy::logging::{LoggerType, init_logger};
 use signal_hook::{consts::signal::SIGHUP, iterator::Signals};
 
 use clap::Parser;
@@ -521,9 +522,7 @@ fn get_profile_path(
                         // using 'dirs::state_dir()' directly.
                         let state_dir = env::var("XDG_STATE_HOME").or_else(|_| {
                             dirs::home_dir()
-                                .map(|h| {
-                                    format!("{}/.local/state", h.as_path().display())
-                                })
+                                .map(|h| format!("{}/.local/state", h.as_path().display()))
                                 .ok_or(GetProfilePathError::NoUserHome(profile_user))
                         })?;
                         Ok(format!("{}/nix/profiles/{}", state_dir, profile_name))
@@ -547,15 +546,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let opts: Opts = Opts::parse();
 
-    deploy::init_logger(
-        opts.debug_logs,
-        opts.log_dir.as_deref(),
-        &match opts.subcmd {
-            SubCommand::Activate(_) => deploy::LoggerType::Activate,
-            SubCommand::Wait(_) => deploy::LoggerType::Wait,
-            SubCommand::Revoke(_) => deploy::LoggerType::Revoke,
-        },
-    )?;
+    let logger_type = &match opts.subcmd {
+        SubCommand::Activate(..) => LoggerType::Activate,
+        SubCommand::Wait(..) => LoggerType::Wait,
+        SubCommand::Revoke(..) => LoggerType::Revoke,
+    };
+    init_logger(opts.debug_logs, opts.log_dir.as_deref(), logger_type)?;
 
     let r = match opts.subcmd {
         SubCommand::Activate(activate_opts) => activate(

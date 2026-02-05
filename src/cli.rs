@@ -854,10 +854,10 @@ pub async fn run(args: Option<&ArgMatches>) -> Result<(), RunError> {
         None => Opts::parse(),
     };
 
-    let (mp, _handle) = deploy::init_logger(
+    let (mp, _handle) = deploy::logging::init_logger(
         opts.debug_logs,
         opts.log_dir.as_deref(),
-        &deploy::LoggerType::Deploy,
+        &deploy::logging::LoggerType::Deploy,
     )?;
 
     let deploys = opts
