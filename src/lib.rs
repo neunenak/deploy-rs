@@ -42,7 +42,7 @@ pub fn logger_formatter_activate(
         w,
         "⭐ {} [activate] [{}] {}",
         make_emoji(level),
-        style(level, level.to_string()),
+        style(level).paint(level.to_string()),
         record.args()
     )
 }
@@ -58,7 +58,7 @@ pub fn logger_formatter_wait(
         w,
         "👀 {} [wait] [{}] {}",
         make_emoji(level),
-        style(level, level.to_string()),
+        style(level).paint(level.to_string()),
         record.args()
     )
 }
@@ -74,7 +74,7 @@ pub fn logger_formatter_revoke(
         w,
         "↩️ {} [revoke] [{}] {}",
         make_emoji(level),
-        style(level, level.to_string()),
+        style(level).paint(level.to_string()),
         record.args()
     )
 }
@@ -90,7 +90,7 @@ pub fn logger_formatter_deploy(
         w,
         "🚀 {} [deploy] [{}] {}",
         make_emoji(level),
-        style(level, level.to_string()),
+        style(level).paint(level.to_string()),
         record.args()
     )
 }
@@ -158,7 +158,7 @@ pub fn init_logger(
     debug_logs: bool,
     log_dir: Option<&str>,
     logger_type: &LoggerType,
-) -> Result<(MultiProgress, ReconfigurationHandle), FlexiLoggerError> {
+) -> Result<(MultiProgress, LoggerHandle), FlexiLoggerError> {
     let logger_formatter = match &logger_type {
         LoggerType::Deploy => logger_formatter_deploy,
         LoggerType::Activate => logger_formatter_activate,
@@ -167,31 +167,31 @@ pub fn init_logger(
     };
 
     let (logger, handle) = if let Some(log_dir) = log_dir {
-        let mut logger = Logger::with_env_or_str("debug")
-            .log_to_file()
+        let mut file_spec = FileSpec::default().directory(log_dir);
+
+        match logger_type {
+            LoggerType::Activate => file_spec = file_spec.discriminant("activate"),
+            LoggerType::Wait => file_spec = file_spec.discriminant("wait"),
+            LoggerType::Revoke => file_spec = file_spec.discriminant("revoke"),
+            LoggerType::Deploy => (),
+        }
+
+        Logger::try_with_env_or_str("debug")?
+            .log_to_file(file_spec)
             .format_for_stderr(logger_formatter)
             .set_palette("196;208;51;7;8".to_string())
-            .directory(log_dir)
             .duplicate_to_stderr(match debug_logs {
                 true => Duplicate::Debug,
                 false => Duplicate::Info,
             })
-            .print_message();
-
-        match logger_type {
-            LoggerType::Activate => logger = logger.discriminant("activate"),
-            LoggerType::Wait => logger = logger.discriminant("wait"),
-            LoggerType::Revoke => logger = logger.discriminant("revoke"),
-            LoggerType::Deploy => (),
-        }
-
-        logger.build()?
+            .print_message()
+            .build()?
     } else {
-        Logger::with_env_or_str(match debug_logs {
+        Logger::try_with_env_or_str(match debug_logs {
             true => "debug",
             false => "info",
-        })
-        .log_target(LogTarget::StdErr)
+        })?
+        .log_to_stderr()
         .format(logger_formatter)
         .set_palette("196;208;51;7;8".to_string())
         .build()?
