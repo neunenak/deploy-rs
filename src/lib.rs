@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use indicatif::MultiProgress;
-use rnix::{types::*, SyntaxKind::*};
+use rnix::{SyntaxKind::*, types::*};
 
 use merge::Merge;
 
@@ -250,7 +250,7 @@ fn parse_fragment(fragment: &str) -> Result<(Option<String>, Option<String>), Pa
 
     let first_child = match ast.root().node().first_child() {
         Some(x) => x,
-        None => return Ok((None, None))
+        None => return Ok((None, None)),
     };
 
     let mut node_over = false;
@@ -376,7 +376,10 @@ fn test_parse_flake() {
     );
 }
 
-pub fn parse_file<'a>(file: &'a str, attribute: &'a str) -> Result<DeployFlake<'a>, ParseFlakeError> {
+pub fn parse_file<'a>(
+    file: &'a str,
+    attribute: &'a str,
+) -> Result<DeployFlake<'a>, ParseFlakeError> {
     let (node, profile) = parse_fragment(attribute)?;
 
     Ok(DeployFlake {
@@ -426,7 +429,7 @@ pub enum DeployDataDefsError {
     NoProfileUser(String, String),
 
     #[error("Error obtaining local username: {0}")]
-    Whoami(whoami::Error)
+    Whoami(whoami::Error),
 }
 
 impl DeployData {
@@ -460,7 +463,7 @@ impl DeployData {
                     return Err(DeployDataDefsError::NoProfileUser(
                         self.profile_name.to_owned(),
                         self.node_name.to_owned(),
-                    ))
+                    ));
                 }
             },
         };
@@ -476,11 +479,16 @@ impl DeployData {
 
     fn get_profile_info(&self) -> Result<ProfileInfo, DeployDataDefsError> {
         match self.profile.profile_settings.profile_path {
-            Some(ref profile_path) => Ok(ProfileInfo::ProfilePath { profile_path: profile_path.to_string() }),
+            Some(ref profile_path) => Ok(ProfileInfo::ProfilePath {
+                profile_path: profile_path.to_string(),
+            }),
             None => {
                 let profile_user = self.get_profile_user()?;
-                Ok(ProfileInfo::ProfileUserAndName { profile_user, profile_name: self.profile_name.to_string() })
-            },
+                Ok(ProfileInfo::ProfileUserAndName {
+                    profile_user,
+                    profile_name: self.profile_name.to_string(),
+                })
+            }
         }
     }
 }
@@ -544,6 +552,6 @@ pub fn make_deploy_data(
         merged_settings,
         debug_logs,
         log_dir,
-        progressbar: None
+        progressbar: None,
     }
 }

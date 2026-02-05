@@ -56,7 +56,7 @@ pub struct GenericSettings {
     #[merge(strategy = merge::option::overwrite_none)]
     pub sudo: Option<String>,
 
-    #[serde(default,rename(deserialize = "remoteBuild"))]
+    #[serde(default, rename(deserialize = "remoteBuild"))]
     #[merge(strategy = merge::option::overwrite_none)]
     pub remote_build: Option<bool>,
 

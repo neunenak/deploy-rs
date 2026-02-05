@@ -4,15 +4,15 @@
 
 use indicatif::ProgressBar;
 use log::{debug, info, warn};
-use tokio::process::Child;
-use tokio_stream::wrappers::LinesStream;
 use std::path::Path;
 use std::process::Stdio;
 use thiserror::Error;
-use tokio::process::Command;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
+use tokio::process::Child;
+use tokio::process::Command;
 use tokio_stream::StreamExt;
+use tokio_stream::wrappers::LinesStream;
 
 #[derive(Error, Debug)]
 pub enum PushProfileError {
@@ -41,8 +41,10 @@ pub enum PushProfileError {
              Did you forget to use deploy-rs#lib.<...>.activate.<...> on your profile path?"
     )]
     DeployRsActivateDoesntExist,
-    #[error("Activation script activate-rs does not exist in profile.\n\
-             Is there a mismatch in deploy-rs used in the flake you're deploying and deploy-rs command you're running?")]
+    #[error(
+        "Activation script activate-rs does not exist in profile.\n\
+             Is there a mismatch in deploy-rs used in the flake you're deploying and deploy-rs command you're running?"
+    )]
     ActivateRsDoesntExist,
     #[error("Failed to run Nix sign command: {0}")]
     Sign(std::io::Error),
@@ -69,7 +71,10 @@ pub struct PushProfileData {
     pub extra_build_args: Vec<String>,
 }
 
-pub async fn build_profile_locally(data: &PushProfileData, derivation_name: &str) -> Result<(), PushProfileError> {
+pub async fn build_profile_locally(
+    data: &PushProfileData,
+    derivation_name: &str,
+) -> Result<(), PushProfileError> {
     info!(
         "Building profile `{}` for node `{}`",
         data.deploy_data.profile_name, data.deploy_data.node_name
@@ -96,7 +101,10 @@ pub async fn build_profile_locally(data: &PushProfileData, derivation_name: &str
     }
     match (data.keep_result, data.supports_flakes) {
         (true, _) => {
-            let result_path = data.result_path.clone().unwrap_or("./.deploy-gc".to_string());
+            let result_path = data
+                .result_path
+                .clone()
+                .unwrap_or("./.deploy-gc".to_string());
 
             build_command.arg("--out-link").arg(format!(
                 "{}/{}/{}",
@@ -170,8 +178,14 @@ pub async fn build_profile_locally(data: &PushProfileData, derivation_name: &str
 }
 
 async fn update_pb_with_child_output(pb: &ProgressBar, child: &mut Child) {
-    let stdout = child.stdout.take().expect("child did not have a stdout handle");
-    let stderr = child.stderr.take().expect("child did not have a stderr handle");
+    let stdout = child
+        .stdout
+        .take()
+        .expect("child did not have a stdout handle");
+    let stderr = child
+        .stderr
+        .take()
+        .expect("child did not have a stderr handle");
 
     let stdout = LinesStream::new(BufReader::new(stdout).lines());
     let stderr = LinesStream::new(BufReader::new(stderr).lines());
@@ -182,7 +196,10 @@ async fn update_pb_with_child_output(pb: &ProgressBar, child: &mut Child) {
     }
 }
 
-pub async fn build_profile_remotely(data: &PushProfileData, derivation_name: &str) -> Result<(), PushProfileError> {
+pub async fn build_profile_remotely(
+    data: &PushProfileData,
+    derivation_name: &str,
+) -> Result<(), PushProfileError> {
     info!(
         "Building profile `{}` for node `{}` on remote host",
         data.deploy_data.profile_name, data.deploy_data.node_name
@@ -208,16 +225,25 @@ pub async fn build_profile_remotely(data: &PushProfileData, derivation_name: &st
     // copy the derivation to remote host so it can be built there
     let copy_command_status = {
         let mut copy_command = Command::new("nix");
-        copy_command.arg("--experimental-features").arg("nix-command");
-        copy_command.arg("copy")
-            .arg("-s")  // fetch dependencies from substitutors, not localhost
-            .arg("--to").arg(&store_address)
-            .arg("--derivation").arg(derivation_name)
+        copy_command
+            .arg("--experimental-features")
+            .arg("nix-command");
+        copy_command
+            .arg("copy")
+            .arg("-s") // fetch dependencies from substitutors, not localhost
+            .arg("--to")
+            .arg(&store_address)
+            .arg("--derivation")
+            .arg(derivation_name)
             .env("NIX_SSHOPTS", ssh_opts_str.clone());
 
         debug!("copy command: {:?}", copy_command);
 
-        let mut child = copy_command.stderr(Stdio::piped()).stdout(Stdio::piped()).spawn().expect("failed to spawn nix copy command");
+        let mut child = copy_command
+            .stderr(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("failed to spawn nix copy command");
 
         if let Some(pb) = &data.deploy_data.progressbar {
             update_pb_with_child_output(pb, &mut child).await;
@@ -234,10 +260,14 @@ pub async fn build_profile_remotely(data: &PushProfileData, derivation_name: &st
     let build_exit_status = {
         let mut build_command = Command::new("nix");
         build_command
-            .arg("--experimental-features").arg("nix-command")
-            .arg("build").arg(derivation_name)
-            .arg("--eval-store").arg("auto")
-            .arg("--store").arg(&store_address)
+            .arg("--experimental-features")
+            .arg("nix-command")
+            .arg("build")
+            .arg(derivation_name)
+            .arg("--eval-store")
+            .arg("auto")
+            .arg("--store")
+            .arg(&store_address)
             .args(data.extra_build_args.clone())
             .env("NIX_SSHOPTS", ssh_opts_str.clone());
 
@@ -272,7 +302,8 @@ pub async fn build_profile(data: &PushProfileData) -> Result<(), PushProfileErro
 
     // `nix-store --query --deriver` doesn't work on invalid paths, so we parse output of show-derivation :(
     let show_derivation_output = Command::new("nix")
-        .arg("--experimental-features").arg("nix-command")
+        .arg("--experimental-features")
+        .arg("nix-command")
         .arg("show-derivation")
         .arg(&data.deploy_data.profile.profile_settings.path)
         .output()
@@ -309,9 +340,11 @@ pub async fn build_profile(data: &PushProfileData) -> Result<(), PushProfileErro
         .arg("--raw")
         .arg("--expr")
         .arg("builtins.storeDir")
-        .output().await
+        .output()
+        .await
         .map_err(PushProfileError::EvalStore)?;
-    let nix_store = std::str::from_utf8(&nix_store_output.stdout).map_err(PushProfileError::EvalStoreUtf8)?;
+    let nix_store =
+        std::str::from_utf8(&nix_store_output.stdout).map_err(PushProfileError::EvalStoreUtf8)?;
 
     let deriver = if deriver_key.starts_with(nix_store) {
         deriver_key.to_string()
@@ -319,7 +352,13 @@ pub async fn build_profile(data: &PushProfileData) -> Result<(), PushProfileErro
         format!("{}/{}", nix_store, deriver_key)
     };
 
-    let new_deriver = if data.supports_flakes || data.deploy_data.merged_settings.remote_build.unwrap_or(false) {
+    let new_deriver = if data.supports_flakes
+        || data
+            .deploy_data
+            .merged_settings
+            .remote_build
+            .unwrap_or(false)
+    {
         // Since nix 2.15.0 'nix build <path>.drv' will build only the .drv file itself, not the
         // derivation outputs, '^out' is used to refer to outputs explicitly
         deriver.clone() + "^out"
@@ -328,13 +367,17 @@ pub async fn build_profile(data: &PushProfileData) -> Result<(), PushProfileErro
     };
 
     let path_info_output = Command::new("nix")
-        .arg("--experimental-features").arg("nix-command")
+        .arg("--experimental-features")
+        .arg("nix-command")
         .arg("path-info")
         .arg(&deriver)
-        .output().await
+        .output()
+        .await
         .map_err(PushProfileError::PathInfo)?;
 
-    let deriver = if std::str::from_utf8(&path_info_output.stdout).map(|s| s.trim()) == Ok(deriver.as_str()) {
+    let deriver = if std::str::from_utf8(&path_info_output.stdout).map(|s| s.trim())
+        == Ok(deriver.as_str())
+    {
         // In this case we're on 2.15.0 or newer, because 'nix path-info <...>.drv'
         // returns the same '<...>.drv' path.
         // If 'nix path-info <...>.drv' returns a different path, then we're on pre 2.15.0 nix and
@@ -349,7 +392,12 @@ pub async fn build_profile(data: &PushProfileData) -> Result<(), PushProfileErro
         // 'error: path '...' is not valid'.
         deriver
     };
-    if data.deploy_data.merged_settings.remote_build.unwrap_or(false) {
+    if data
+        .deploy_data
+        .merged_settings
+        .remote_build
+        .unwrap_or(false)
+    {
         if !data.supports_flakes {
             warn!("remote builds using non-flake nix are experimental");
         }
@@ -373,10 +421,14 @@ pub async fn push_profile(data: PushProfileData) -> Result<(), PushProfileError>
     )
     .unwrap_or(data.deploy_data.merged_settings.ssh_opts.join(" "));
 
-
     // remote building guarantees that the resulting derivation is stored on the target system
     // no need to copy after building
-    if !data.deploy_data.merged_settings.remote_build.unwrap_or(false) {
+    if !data
+        .deploy_data
+        .merged_settings
+        .remote_build
+        .unwrap_or(false)
+    {
         info!(
             "Copying profile `{}` to node `{}`",
             data.deploy_data.profile_name, data.deploy_data.node_name
@@ -398,11 +450,18 @@ pub async fn push_profile(data: PushProfileData) -> Result<(), PushProfileError>
             None => &data.deploy_data.node.node_settings.hostname,
         };
 
-        let compress = data.deploy_data.merged_settings.compress.unwrap_or_else(|| false);
+        let compress = data
+            .deploy_data
+            .merged_settings
+            .compress
+            .unwrap_or_else(|| false);
 
         let copy_exit_status = copy_command
             .arg("--to")
-            .arg(format!("ssh://{}@{}?compress={}", data.deploy_defs.ssh_user, hostname, compress))
+            .arg(format!(
+                "ssh://{}@{}?compress={}",
+                data.deploy_defs.ssh_user, hostname, compress
+            ))
             .arg(&data.deploy_data.profile.profile_settings.path)
             .env("NIX_SSHOPTS", ssh_opts_str)
             .status()

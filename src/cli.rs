@@ -4,10 +4,10 @@
 // SPDX-License-Identifier: MPL-2.0
 
 use std::collections::HashMap;
-use std::io::{stdin, stdout, Write};
+use std::io::{Write, stdin, stdout};
 use std::time::Duration;
 
-use clap::{ArgMatches, Parser, FromArgMatches};
+use clap::{ArgMatches, FromArgMatches, Parser};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use tokio::join;
 
@@ -363,7 +363,9 @@ fn prompt_deployment(
 
     if !yn::yes(&s) {
         if yn::is_somewhat_yes(&s) {
-            info!("Sounds like you might want to continue, to be more clear please just say \"yes\". Do you want to deploy these profiles?");
+            info!(
+                "Sounds like you might want to continue, to be more clear please just say \"yes\". Do you want to deploy these profiles?"
+            );
             print!("> ");
 
             stdout()
@@ -399,7 +401,7 @@ pub enum RunDeployError {
     #[error("Failed to build profile {0} on node {1}: {2}")]
     BuildProfile(String, String, deploy::push::PushProfileError),
     #[error("Failed to push profile {0} to node {1}: {2}")]
-    PushProfile(String, String,deploy::push::PushProfileError),
+    PushProfile(String, String, deploy::push::PushProfileError),
 
     #[error("No profile named `{0}` was found")]
     ProfileNotFound(String),
@@ -483,7 +485,7 @@ async fn run_deploy(
                         let profile = match node.node_settings.profiles.get(profile_name) {
                             Some(x) => x,
                             None => {
-                                return Err(RunDeployError::ProfileNotFound(profile_name.clone()))
+                                return Err(RunDeployError::ProfileNotFound(profile_name.clone()));
                             }
                         };
 
@@ -514,7 +516,7 @@ async fn run_deploy(
                                 None => {
                                     return Err(RunDeployError::ProfileNotFound(
                                         profile_name.clone(),
-                                    ))
+                                    ));
                                 }
                             };
 
@@ -562,11 +564,19 @@ async fn run_deploy(
 
         let mut deploy_defs = deploy_data.defs()?;
 
-        if deploy_data.merged_settings.interactive_sudo.unwrap_or(false) {
-            warn!("Interactive sudo is enabled! Using a sudo password is less secure than correctly configured SSH keys.\nPlease use keys in production environments.");
+        if deploy_data
+            .merged_settings
+            .interactive_sudo
+            .unwrap_or(false)
+        {
+            warn!(
+                "Interactive sudo is enabled! Using a sudo password is less secure than correctly configured SSH keys.\nPlease use keys in production environments."
+            );
 
             if deploy_data.merged_settings.sudo.is_some() {
-                warn!("Custom sudo commands should be configured to accept password input from stdin when using the 'interactive sudo' option. Deployment may fail if the custom command ignores stdin.");
+                warn!(
+                    "Custom sudo commands should be configured to accept password input from stdin when using the 'interactive sudo' option. Deployment may fail if the custom command ignores stdin."
+                );
             } else {
                 // this configures sudo to hide the password prompt and accept input from stdin
                 // at the time of writing, deploy_defs.sudo defaults to 'sudo -u root' when using user=root and sshUser as non-root
@@ -574,8 +584,15 @@ async fn run_deploy(
                 deploy_defs.sudo = Some(format!("{} -S -p \"\"", original));
             }
 
-            info!("You will now be prompted for the sudo password for {}.", node.node_settings.hostname);
-            let sudo_password = rpassword::prompt_password(format!("(sudo for {}) Password: ", node.node_settings.hostname)).unwrap_or("".to_string());
+            info!(
+                "You will now be prompted for the sudo password for {}.",
+                node.node_settings.hostname
+            );
+            let sudo_password = rpassword::prompt_password(format!(
+                "(sudo for {}) Password: ",
+                node.node_settings.hostname
+            ))
+            .unwrap_or("".to_string());
 
             deploy_defs.sudo_password = Some(sudo_password);
         }
@@ -604,7 +621,6 @@ async fn run_deploy(
         )
     };
 
-
     let (remote_builds, local_builds): (Vec<_>, Vec<_>) = data_iter().partition(|data| {
         data.deploy_data
             .merged_settings
@@ -631,9 +647,13 @@ async fn run_deploy(
 
     // show progress information
     let remote_mp = mp.clone();
-    let spinner_style = ProgressStyle::with_template("{spinner:.blue} {prefix} {msg}").expect("invalid template").tick_strings(&["⢎ ", "⠎⠁", "⠊⠑", "⠈⠱", " ⡱", "⢀⡰", "⢄⡠", "⢆⡀"]);
-    let finish_style = || ProgressStyle::with_template("✅ {prefix} {msg}").expect("invalid template");
-    let finish_style_error = || ProgressStyle::with_template("❌ {prefix} {msg}").expect("invalid template");
+    let spinner_style = ProgressStyle::with_template("{spinner:.blue} {prefix} {msg}")
+        .expect("invalid template")
+        .tick_strings(&["⢎ ", "⠎⠁", "⠊⠑", "⠈⠱", " ⡱", "⢀⡰", "⢄⡠", "⢆⡀"]);
+    let finish_style =
+        || ProgressStyle::with_template("✅ {prefix} {msg}").expect("invalid template");
+    let finish_style_error =
+        || ProgressStyle::with_template("❌ {prefix} {msg}").expect("invalid template");
     let new_spinner = || ProgressBar::new_spinner().with_style(spinner_style.clone());
 
     let (remote_results, local_results) = join!(
@@ -654,13 +674,25 @@ async fn run_deploy(
                     for mut profile in profiles {
                         let nodename = profile.deploy_data.node_name.clone();
                         let profilename = profile.deploy_data.profile_name.clone();
-                        pb.set_prefix(format!("Building profile '{}' on host '{}'", profilename, nodename));
+                        pb.set_prefix(format!(
+                            "Building profile '{}' on host '{}'",
+                            profilename, nodename
+                        ));
                         pb.set_message("...");
                         profile.deploy_data.progressbar = Some(pb.clone());
 
-                        info!("starting build of profile {} on node {}", profilename, nodename);
+                        info!(
+                            "starting build of profile {} on node {}",
+                            profilename, nodename
+                        );
 
-                        res = deploy::push::build_profile(&profile).await.map_err(|e| { RunDeployError::BuildProfile(profilename.to_string(), nodename.to_string(), e) });
+                        res = deploy::push::build_profile(&profile).await.map_err(|e| {
+                            RunDeployError::BuildProfile(
+                                profilename.to_string(),
+                                nodename.to_string(),
+                                e,
+                            )
+                        });
                         if !res.is_ok() {
                             break;
                         }
@@ -670,7 +702,7 @@ async fn run_deploy(
                         Ok(()) => {
                             pb.set_style(finish_style());
                             pb.finish_with_message("Done!");
-                        },
+                        }
                         Err(ref e) => {
                             pb.set_style(finish_style_error());
                             pb.finish_with_message(format!("Error: {}", e.to_string()))
@@ -683,7 +715,6 @@ async fn run_deploy(
 
             set.join_all().await
         },
-
         // run local builds synchronously to prevent hardware deadlocks
         async move {
             let mut set = JoinSet::new();
@@ -694,24 +725,32 @@ async fn run_deploy(
 
                 let node_name = data.deploy_data.node_name.to_string();
                 let profile_name = data.deploy_data.profile_name.to_string();
-                pb.set_prefix(format!("Building profile '{}' for host '{}'", profile_name, node_name));
+                pb.set_prefix(format!(
+                    "Building profile '{}' for host '{}'",
+                    profile_name, node_name
+                ));
 
-                let res = deploy::push::build_profile(&data)
-                    .await
-                    .map_err(|e| RunDeployError::BuildProfile(profile_name.clone(), node_name.clone(), e));
+                let res = deploy::push::build_profile(&data).await.map_err(|e| {
+                    RunDeployError::BuildProfile(profile_name.clone(), node_name.clone(), e)
+                });
 
                 match res {
                     Ok(()) => {
                         data.deploy_data.progressbar = Some(pb.clone());
                         set.spawn(async move {
                             let data = data.clone();
-                            pb.set_prefix(format!("Pushing profile '{}' to host '{}'", profile_name, node_name));
-                            let res = deploy::push::push_profile(data).await.map_err(|e| RunDeployError::PushProfile(profile_name, node_name, e));
+                            pb.set_prefix(format!(
+                                "Pushing profile '{}' to host '{}'",
+                                profile_name, node_name
+                            ));
+                            let res = deploy::push::push_profile(data).await.map_err(|e| {
+                                RunDeployError::PushProfile(profile_name, node_name, e)
+                            });
                             match res {
                                 Ok(()) => {
                                     pb.set_style(finish_style());
                                     pb.finish_with_message("Done!");
-                                },
+                                }
                                 Err(ref e) => {
                                     pb.set_style(finish_style_error());
                                     pb.finish_with_message(format!("Error: {}", e.to_string()))
@@ -719,7 +758,7 @@ async fn run_deploy(
                             }
                             res
                         });
-                    },
+                    }
                     Err(ref e) => {
                         pb.set_style(finish_style_error());
                         pb.finish_with_message(format!("Error: {}", e.to_string()));
@@ -735,8 +774,12 @@ async fn run_deploy(
     );
 
     // abort here if any build + push or push + build failed
-    for result in remote_results { result? }
-    for result in local_results { result? }
+    for result in remote_results {
+        result?
+    }
+    for result in local_results {
+        result?
+    }
 
     // Run all activations
     // In case of an error, rollback any previoulsy made deployment.
@@ -764,7 +807,7 @@ async fn run_deploy(
                                 RunDeployError::RevokeProfile(
                                     deploy_data.profile_name.to_string(),
                                     deploy_data.node_name.to_string(),
-                                    e
+                                    e,
                                 )
                             })?;
                     }
@@ -822,18 +865,16 @@ pub async fn run(args: Option<&ArgMatches>) -> Result<(), RunError> {
         .targets
         .unwrap_or_else(|| vec![opts.clone().target.unwrap_or_else(|| ".".to_string())]);
 
-    let deploy_flakes: Vec<DeployFlake> =
-        if let Some(file) = &opts.file {
-            deploys
-                .iter()
-                .map(|f| deploy::parse_file(file.as_str(), f.as_str()))
-                .collect::<Result<Vec<DeployFlake>, ParseFlakeError>>()?
-        }
-    else {
+    let deploy_flakes: Vec<DeployFlake> = if let Some(file) = &opts.file {
         deploys
-        .iter()
-        .map(|f| deploy::parse_flake(f.as_str()))
-          .collect::<Result<Vec<DeployFlake>, ParseFlakeError>>()?
+            .iter()
+            .map(|f| deploy::parse_file(file.as_str(), f.as_str()))
+            .collect::<Result<Vec<DeployFlake>, ParseFlakeError>>()?
+    } else {
+        deploys
+            .iter()
+            .map(|f| deploy::parse_flake(f.as_str()))
+            .collect::<Result<Vec<DeployFlake>, ParseFlakeError>>()?
     };
 
     let cmd_overrides = deploy::CmdOverrides {
@@ -858,7 +899,9 @@ pub async fn run(args: Option<&ArgMatches>) -> Result<(), RunError> {
     let do_not_want_flakes = opts.file.is_some();
 
     if !supports_flakes {
-        warn!("A Nix version without flakes support was detected, support for this is work in progress");
+        warn!(
+            "A Nix version without flakes support was detected, support for this is work in progress"
+        );
     }
 
     if do_not_want_flakes {
@@ -890,7 +933,7 @@ pub async fn run(args: Option<&ArgMatches>) -> Result<(), RunError> {
         opts.test,
         &opts.log_dir,
         opts.rollback_succeeded.unwrap_or(true),
-        mp
+        mp,
     )
     .await?;
 
