@@ -217,6 +217,7 @@ pub struct DeployData {
 
     pub debug_logs: bool,
     pub log_dir: Option<String>,
+    pub no_emoji: bool,
 
     pub progressbar: Option<indicatif::ProgressBar>,
 }
@@ -317,6 +318,7 @@ pub fn make_deploy_data(
     cmd_overrides: &CmdOverrides,
     debug_logs: bool,
     log_dir: Option<String>,
+    no_emoji: bool,
 ) -> DeployData {
     let mut merged_settings = profile.generic_settings.clone();
     merged_settings.merge(node.generic_settings.clone());
@@ -367,6 +369,7 @@ pub fn make_deploy_data(
         merged_settings,
         debug_logs,
         log_dir,
+        no_emoji,
         progressbar: None,
     }
 }

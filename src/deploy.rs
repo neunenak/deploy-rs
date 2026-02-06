@@ -24,6 +24,7 @@ struct ActivateCommandData<'a> {
     dry_activate: bool,
     boot: bool,
     test: bool,
+    no_emoji: bool,
 }
 
 fn build_activate_command(data: &ActivateCommandData) -> String {
@@ -35,6 +36,10 @@ fn build_activate_command(data: &ActivateCommandData) -> String {
 
     if let Some(log_dir) = data.log_dir {
         self_activate_command = format!("{} --log-dir {}", self_activate_command, log_dir);
+    }
+
+    if data.no_emoji {
+        self_activate_command = format!("{} --no-emoji", self_activate_command);
     }
 
     self_activate_command = format!(
@@ -118,6 +123,7 @@ fn test_activation_command_builder() {
             dry_activate,
             boot,
             test,
+            no_emoji: false,
         }),
         "sudo -u test /nix/store/blah/etc/activate-rs --debug-logs --log-dir /tmp/something.txt activate '/nix/store/blah/etc' --profile-path '/blah/profiles/test' --temp-path '/tmp' --confirm-timeout 30 --magic-rollback --auto-rollback"
             .to_string(),
@@ -131,6 +137,7 @@ struct WaitCommandData<'a> {
     activation_timeout: Option<u16>,
     debug_logs: bool,
     log_dir: Option<&'a str>,
+    no_emoji: bool,
 }
 
 fn build_wait_command(data: &WaitCommandData) -> String {
@@ -142,6 +149,10 @@ fn build_wait_command(data: &WaitCommandData) -> String {
 
     if let Some(log_dir) = data.log_dir {
         self_activate_command = format!("{} --log-dir {}", self_activate_command, log_dir);
+    }
+
+    if data.no_emoji {
+        self_activate_command = format!("{} --no-emoji", self_activate_command);
     }
 
     self_activate_command = format!(
@@ -180,7 +191,8 @@ fn test_wait_command_builder() {
             temp_path,
             activation_timeout,
             debug_logs,
-            log_dir
+            log_dir,
+            no_emoji: false,
         }),
         "sudo -u test /nix/store/blah/etc/activate-rs --debug-logs --log-dir /tmp/something.txt wait '/nix/store/blah/etc' --temp-path '/tmp' --activation-timeout 600"
             .to_string(),
@@ -193,6 +205,7 @@ struct RevokeCommandData<'a> {
     profile_info: ProfileInfo,
     debug_logs: bool,
     log_dir: Option<&'a str>,
+    no_emoji: bool,
 }
 
 fn build_revoke_command(data: &RevokeCommandData) -> String {
@@ -204,6 +217,10 @@ fn build_revoke_command(data: &RevokeCommandData) -> String {
 
     if let Some(log_dir) = data.log_dir {
         self_activate_command = format!("{} --log-dir {}", self_activate_command, log_dir);
+    }
+
+    if data.no_emoji {
+        self_activate_command = format!("{} --no-emoji", self_activate_command);
     }
 
     self_activate_command = format!(
@@ -245,7 +262,8 @@ fn test_revoke_command_builder() {
             closure,
             profile_info,
             debug_logs,
-            log_dir
+            log_dir,
+            no_emoji: false,
         }),
         "sudo -u test /nix/store/blah/etc/activate-rs --debug-logs --log-dir /tmp/something.txt revoke --profile-path '/nix/var/nix/per-user/user/profile'"
             .to_string(),
@@ -409,6 +427,7 @@ pub async fn deploy_profile(
         dry_activate,
         boot,
         test,
+        no_emoji: deploy_data.no_emoji,
     });
 
     debug!("Constructed activation command: {}", self_activate_command);
@@ -471,6 +490,7 @@ pub async fn deploy_profile(
             activation_timeout,
             debug_logs: deploy_data.debug_logs,
             log_dir: deploy_data.log_dir.as_deref(),
+            no_emoji: deploy_data.no_emoji,
         });
 
         debug!("Constructed wait command: {}", self_wait_command);
@@ -592,6 +612,7 @@ pub async fn revoke(
         profile_info: deploy_data.get_profile_info()?,
         debug_logs: deploy_data.debug_logs,
         log_dir: deploy_data.log_dir.as_deref(),
+        no_emoji: deploy_data.no_emoji,
     });
 
     debug!("Constructed revoke command: {}", self_revoke_command);

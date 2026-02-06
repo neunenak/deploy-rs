@@ -447,6 +447,7 @@ async fn run_deploy(
     test: bool,
     log_dir: &Option<String>,
     rollback_succeeded: bool,
+    no_emoji: bool,
     mp: MultiProgress,
 ) -> Result<(), RunDeployError> {
     let to_deploy: ToDeploy = deploy_flakes
@@ -563,6 +564,7 @@ async fn run_deploy(
             cmd_overrides,
             debug_logs,
             log_dir.clone(),
+            no_emoji,
         );
 
         let mut deploy_defs = deploy_data.defs()?;
@@ -650,13 +652,25 @@ async fn run_deploy(
 
     // show progress information
     let remote_mp = mp.clone();
-    let spinner_style = ProgressStyle::with_template("{spinner:.blue} {prefix} {msg}")
-        .expect("invalid template")
-        .tick_strings(&["⢎ ", "⠎⠁", "⠊⠑", "⠈⠱", " ⡱", "⢀⡰", "⢄⡠", "⢆⡀"]);
-    let finish_style =
-        || ProgressStyle::with_template("✅ {prefix} {msg}").expect("invalid template");
-    let finish_style_error =
-        || ProgressStyle::with_template("❌ {prefix} {msg}").expect("invalid template");
+    let spinner_style = if no_emoji {
+        ProgressStyle::with_template("{spinner:.blue} {prefix} {msg}")
+            .expect("invalid template")
+            .tick_strings(&[". ", ".. ", "...", " ..", "  .", "   "])
+    } else {
+        ProgressStyle::with_template("{spinner:.blue} {prefix} {msg}")
+            .expect("invalid template")
+            .tick_strings(&["⢎ ", "⠎⠁", "⠊⠑", "⠈⠱", " ⡱", "⢀⡰", "⢄⡠", "⢆⡀"])
+    };
+    let finish_style = if no_emoji {
+        || ProgressStyle::with_template("[done] {prefix} {msg}").expect("invalid template")
+    } else {
+        || ProgressStyle::with_template("✅ {prefix} {msg}").expect("invalid template")
+    };
+    let finish_style_error = if no_emoji {
+        || ProgressStyle::with_template("[error] {prefix} {msg}").expect("invalid template")
+    } else {
+        || ProgressStyle::with_template("❌ {prefix} {msg}").expect("invalid template")
+    };
     let new_spinner = || ProgressBar::new_spinner().with_style(spinner_style.clone());
 
     let (remote_results, local_results) = join!(
@@ -937,6 +951,7 @@ pub async fn run(args: Option<&ArgMatches>) -> Result<(), RunError> {
         opts.test,
         &opts.log_dir,
         opts.rollback_succeeded.unwrap_or(true),
+        opts.no_emoji,
         mp,
     )
     .await?;
