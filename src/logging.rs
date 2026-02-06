@@ -1,14 +1,27 @@
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use flexi_logger::*;
 use indicatif::MultiProgress;
 use log::Log;
 
-const fn make_emoji(level: log::Level) -> &'static str {
-    match level {
-        log::Level::Error => "❌",
-        log::Level::Warn => "⚠️",
-        log::Level::Info => "ℹ️",
-        log::Level::Debug => "❓",
-        log::Level::Trace => "🖊️",
+static EMOJI_ENABLED: AtomicBool = AtomicBool::new(true);
+
+fn emoji_enabled() -> bool {
+    EMOJI_ENABLED.load(Ordering::Relaxed)
+}
+
+fn make_prefix(logger_emoji: &str, level: log::Level) -> String {
+    if emoji_enabled() {
+        let level_emoji = match level {
+            log::Level::Error => "❌",
+            log::Level::Warn => "⚠️",
+            log::Level::Info => "ℹ️",
+            log::Level::Debug => "❓",
+            log::Level::Trace => "🖊️",
+        };
+        format!("{} {} ", logger_emoji, level_emoji)
+    } else {
+        String::new()
     }
 }
 
@@ -21,8 +34,8 @@ fn logger_formatter_activate(
 
     write!(
         w,
-        "⭐ {} [activate] [{}] {}",
-        make_emoji(level),
+        "{}[activate] [{}] {}",
+        make_prefix("⭐", level),
         style(level).paint(level.to_string()),
         record.args()
     )
@@ -37,8 +50,8 @@ fn logger_formatter_wait(
 
     write!(
         w,
-        "👀 {} [wait] [{}] {}",
-        make_emoji(level),
+        "{}[wait] [{}] {}",
+        make_prefix("👀", level),
         style(level).paint(level.to_string()),
         record.args()
     )
@@ -53,8 +66,8 @@ fn logger_formatter_revoke(
 
     write!(
         w,
-        "↩️ {} [revoke] [{}] {}",
-        make_emoji(level),
+        "{}[revoke] [{}] {}",
+        make_prefix("↩️", level),
         style(level).paint(level.to_string()),
         record.args()
     )
@@ -69,8 +82,8 @@ fn logger_formatter_deploy(
 
     write!(
         w,
-        "🚀 {} [deploy] [{}] {}",
-        make_emoji(level),
+        "{}[deploy] [{}] {}",
+        make_prefix("🚀", level),
         style(level).paint(level.to_string()),
         record.args()
     )
@@ -137,8 +150,11 @@ pub fn init_logger(
     debug_logs: bool,
     log_dir: Option<&str>,
     logger_type: &LoggerType,
+    no_emoji: bool,
 ) -> Result<(MultiProgress, LoggerHandle), FlexiLoggerError> {
-    let logger_formatter = match &logger_type {
+    EMOJI_ENABLED.store(!no_emoji, Ordering::Relaxed);
+
+    let logger_formatter = match logger_type {
         LoggerType::Deploy => logger_formatter_deploy,
         LoggerType::Activate => logger_formatter_activate,
         LoggerType::Wait => logger_formatter_wait,

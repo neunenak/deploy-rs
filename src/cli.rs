@@ -53,6 +53,9 @@ pub struct Opts {
     /// Directory to print logs to (including the background activation process)
     #[arg(long)]
     log_dir: Option<String>,
+    /// Disable emoji in log output
+    #[arg(long)]
+    no_emoji: bool,
 
     /// Keep the build outputs of each built profile
     #[arg(short, long)]
@@ -858,6 +861,7 @@ pub async fn run(args: Option<&ArgMatches>) -> Result<(), RunError> {
         opts.debug_logs,
         opts.log_dir.as_deref(),
         &deploy::logging::LoggerType::Deploy,
+        opts.no_emoji,
     )?;
 
     let deploys = opts

@@ -35,6 +35,9 @@ struct Opts {
     /// Directory to print logs to
     #[arg(long)]
     log_dir: Option<String>,
+    /// Disable emoji in log output
+    #[arg(long)]
+    no_emoji: bool,
 
     #[command(subcommand)]
     subcmd: SubCommand,
@@ -551,7 +554,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         SubCommand::Wait(..) => LoggerType::Wait,
         SubCommand::Revoke(..) => LoggerType::Revoke,
     };
-    init_logger(opts.debug_logs, opts.log_dir.as_deref(), logger_type)?;
+    init_logger(
+        opts.debug_logs,
+        opts.log_dir.as_deref(),
+        logger_type,
+        opts.no_emoji,
+    )?;
 
     let r = match opts.subcmd {
         SubCommand::Activate(activate_opts) => activate(
